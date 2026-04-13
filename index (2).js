@@ -21,7 +21,7 @@ const client = new Client({
 });
 
 // ================= CONFIG =================
-const TOKEN = "MTQ5MzI2NTUwNTY5NDM4NDE5MA.GNqjf2.ZKgP52KE7HWVgd7IQWP6RS7UHqb2SMS8-xb3gM";
+const TOKEN = "";
 const PANEL_CHANNEL_ID = "1491210896603615322";
 const ADMIN_CHANNEL_ID = "1493261409419530260";
 
