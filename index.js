@@ -29,13 +29,13 @@ const ADMIN_CHANNEL_ID = "1493261409419530260";
 const activeTickets = new Map();
 const closedTickets = new Set();
 
-// ================= FUNCTION =================
-function isClosed(userId) {
-  return closedTickets.has(userId);
+// ================= HELPERS =================
+function ticketExists(userId) {
+  return activeTickets.has(userId);
 }
 
 // ================= READY =================
-client.once("ready", async () => {
+client.once("clientReady", async () => {
   console.log("BOT ONLINE:", client.user.tag);
 
   const channel = await client.channels.fetch(PANEL_CHANNEL_ID);
@@ -52,12 +52,7 @@ client.once("ready", async () => {
       .setStyle(ButtonStyle.Primary)
   );
 
-  const msgs = await channel.messages.fetch({ limit: 10 });
-  const exists = msgs.find(m => m.author.id === client.user.id);
-
-  if (!exists) {
-    await channel.send({ embeds: [embed], components: [row] });
-  }
+  await channel.send({ embeds: [embed], components: [row] });
 });
 
 // ================= INTERACTIONS =================
@@ -86,7 +81,7 @@ client.on("interactionCreate", async (interaction) => {
     const problem = interaction.fields.getTextInputValue("problem");
 
     activeTickets.set(interaction.user.id, {
-      problem: problem,
+      problem,
       tag: interaction.user.tag
     });
 
@@ -121,9 +116,9 @@ client.on("interactionCreate", async (interaction) => {
 
     const userId = interaction.customId.split("_")[1];
 
-    if (isClosed(userId)) {
+    if (!ticketExists(userId)) {
       return interaction.reply({
-        content: "❌ Ticket jau ir aizvērts un nav aktuāls.",
+        content: "❌ Šis ticket neeksistē vai jau ir slēgts.",
         ephemeral: true
       });
     }
@@ -151,9 +146,9 @@ client.on("interactionCreate", async (interaction) => {
 
     const userId = interaction.customId.split("_")[2];
 
-    if (isClosed(userId)) {
+    if (!ticketExists(userId)) {
       return interaction.reply({
-        content: "❌ Ticket jau ir aizvērts un nav aktuāls.",
+        content: "❌ Šis ticket neeksistē vai jau ir slēgts.",
         ephemeral: true
       });
     }
@@ -162,7 +157,7 @@ client.on("interactionCreate", async (interaction) => {
     const user = await client.users.fetch(userId);
 
     const embed = new EmbedBuilder()
-      .setTitle("Discord Administratora atbilde")
+      .setTitle("Administratora atbilde")
       .setDescription(msg)
       .setColor(0x00ff99);
 
@@ -188,16 +183,16 @@ client.on("interactionCreate", async (interaction) => {
 
     const userId = interaction.customId.split("_")[1];
 
-    if (isClosed(userId)) {
+    if (!ticketExists(userId)) {
       return interaction.reply({
-        content: "❌ Ticket jau ir aizvērts un nav aktuāls.",
+        content: "❌ Šis ticket jau ir slēgts.",
         ephemeral: true
       });
     }
 
     if (
       interaction.user.id !== userId &&
-      (!interaction.member || !interaction.member.permissions.has(PermissionsBitField.Flags.Administrator))
+      !interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
     ) {
       return interaction.reply({ content: "Nav atļaujas!", ephemeral: true });
     }
@@ -218,48 +213,43 @@ client.on("interactionCreate", async (interaction) => {
 
     const userId = interaction.customId.split("_")[1];
 
-    if (isClosed(userId)) {
+    if (!ticketExists(userId)) {
       return interaction.reply({
-        content: "❌ Ticket jau ir aizvērts un nav aktuāls.",
+        content: "❌ Šis ticket neeksistē vai jau ir slēgts.",
         ephemeral: true
       });
     }
 
     const data = activeTickets.get(userId);
-    const lastProblem = data?.problem || "Nav datu";
-    const userTag = data?.tag || userId;
 
     const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
 
-    const logEmbed = new EmbedBuilder()
+    const embed = new EmbedBuilder()
       .setTitle("⚠ Ticket NAV atrisināts")
       .setColor(0xffcc00)
       .addFields(
-        { name: "Lietotājs", value: userTag },
-        { name: "Problēma", value: lastProblem }
+        { name: "Lietotājs", value: data.tag },
+        { name: "Problēma", value: data.problem }
       );
 
-    await adminChannel.send({ embeds: [logEmbed] });
+    await adminChannel.send({ embeds: [embed] });
 
     const user = await client.users.fetch(userId);
+    await user.send("Admins tika informēts, gaidi atbildi.");
 
-    await user.send("Discord Administratori tika informēti lūdzu gaidi atbildi!");
-
-    const adminMsg = new EmbedBuilder()
-      .setTitle("🔁 Nepieciešama atkārtota atbilde")
-      .setColor(0xff0000)
-      .addFields({ name: "Lietotājs", value: userTag });
-
-    const row2 = new ActionRowBuilder().addComponents(
+    const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`reply_${userId}`)
         .setLabel("Atbildēt vēlreiz")
         .setStyle(ButtonStyle.Success)
     );
 
-    await adminChannel.send({ embeds: [adminMsg], components: [row2] });
+    await adminChannel.send({ components: [row] });
 
-    return interaction.reply({ content: "Discord Administratori tika informēti lūdzu gaidi atbildi!", ephemeral: true });
+    return interaction.reply({
+      content: "Informēts!",
+      ephemeral: true
+    });
   }
 
 });
