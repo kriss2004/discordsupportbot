@@ -21,7 +21,7 @@ const client = new Client({
 });
 
 // ================= CONFIG =================
-const TOKEN = "";
+const TOKEN = process.env.TOKEN;
 const PANEL_CHANNEL_ID = "1491210896603615322";
 const ADMIN_CHANNEL_ID = "1493261409419530260";
 
